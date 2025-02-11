@@ -13,22 +13,18 @@ set(CMAKE_CUDA_ARCHITECTURES 80 86 90)
 # add_compile_options("--ptxas-options=-v")
 
 # Configure header file search paths
-include_directories(${CUDA_INCLUDE_DIRS})
-include_directories(${PROJECT_SOURCE_DIR}/src)
+# include_directories(${CUDA_INCLUDE_DIRS})
+# include_directories(${PROJECT_SOURCE_DIR}/src)
 # Configure the source file path to be compiled
 aux_source_directory(${PROJECT_SOURCE_DIR}/src SRC)
 
 # generate executable
 add_executable(sgemm sgemm.cu ${SRC})
-# set_target_properties(sgemm PROPERTIES CUDA_ARCHITECTURES ${CUDA_COMPUTE_CAPABILITY})
-# target_link_libraries(sgemm ${CUDA_LIBRARIES} ${CUDA_CUBLAS_LIBRARIES})
 target_link_libraries(sgemm CUDA::cudart CUDA::cublas)
+target_compile_options(sgemm PUBLIC $<$<COMPILE_LANGUAGE:CUDA>:-I${CMAKE_SOURCE_DIR}/src>)
+
 add_executable(cuBLAS_sgemm cuBLAS_sgemm.cu )
 target_link_libraries(cuBLAS_sgemm CUDA::cudart CUDA::cublas)
-# set_target_properties(sgemm PROPERTIES CUDA_ARCHITECTURES ${CUDA_COMPUTE_CAPABILITY})
-# target_link_libraries(cuBLAS_sgemm ${CUDA_LIBRARIES} ${CUDA_CUBLAS_LIBRARIES})
 
 add_executable(simplest_kernel simplest_kernel.cu)
 target_link_libraries(simplest_kernel CUDA::cudart CUDA::cublas)
-# set_target_properties(sgemm PROPERTIES CUDA_ARCHITECTURES ${CUDA_COMPUTE_CAPABILITY})
-# target_link_libraries(simplest_kernel ${CUDA_LIBRARIES})
