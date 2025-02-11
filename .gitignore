@@ -2,5 +2,5 @@ build
 build_*
 .cache
 .clangd
-.clang-format
 .vscode
+build-*

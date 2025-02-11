@@ -5,7 +5,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 find_package(CUDAToolkit REQUIRED)
 
 set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CUDA_ARCHITECTURES 80 86)
+set(CMAKE_CUDA_ARCHITECTURES 80 86 90)
 
 # in debug mode, add debug symbols to device code
 # this disables most optimizations and kills performance

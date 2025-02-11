@@ -50,10 +50,9 @@ void CudaDeviceInfo()
     totalConstMem: %zuKB\n\
     multiProcessorCount: %d\n\
     Warp Size: %d\n",
-        deviceId, props.name, props.major, props.minor, props.memoryBusWidth,
-        props.maxThreadsPerBlock, props.maxThreadsPerMultiProcessor, props.regsPerBlock,
-        props.regsPerMultiprocessor, props.totalGlobalMem / 1024 / 1024,
-        props.sharedMemPerBlock / 1024, props.sharedMemPerMultiprocessor / 1024,
+        deviceId, props.name, props.major, props.minor, props.memoryBusWidth, props.maxThreadsPerBlock,
+        props.maxThreadsPerMultiProcessor, props.regsPerBlock, props.regsPerMultiprocessor,
+        props.totalGlobalMem / 1024 / 1024, props.sharedMemPerBlock / 1024, props.sharedMemPerMultiprocessor / 1024,
         props.totalConstMem / 1024, props.multiProcessorCount, props.warpSize);
 };
 
@@ -117,8 +116,7 @@ bool verify_matrix(float *matRef, float *matOut, int N)
     for (i = 0; i < N; i++) {
         diff = std::fabs(matRef[i] - matOut[i]);
         if (diff > 0.01) {
-            printf("Divergence! Should %5.2f, Is %5.2f (Diff %5.2f) at %d\n", matRef[i], matOut[i],
-                   diff, i);
+            printf("Divergence! Should %5.2f, Is %5.2f (Diff %5.2f) at %d\n", matRef[i], matOut[i], diff, i);
             return false;
         }
     }
@@ -131,34 +129,29 @@ int div_ceil(int numerator, int denominator)
     return res.rem ? (res.quot + 1) : res.quot;
 }
 
-void runCublasFP32(cublasHandle_t handle, int M, int N, int K, float alpha, float *A, float *B,
-                   float beta, float *C)
+void runCublasFP32(cublasHandle_t handle, int M, int N, int K, float alpha, float *A, float *B, float beta, float *C)
 {
     // cuBLAS uses column-major order. So we change the order of our row-major A &
     // B, since (B^T*A^T)^T = (A*B)
     // This runs cuBLAS in full fp32 mode
-    cublasGemmEx(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K, &alpha, B, CUDA_R_32F, N, A, CUDA_R_32F,
-                 K, &beta, C, CUDA_R_32F, N, CUBLAS_COMPUTE_32F, CUBLAS_GEMM_DEFAULT_TENSOR_OP);
+    cublasGemmEx(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K, &alpha, B, CUDA_R_32F, N, A, CUDA_R_32F, K, &beta, C,
+                 CUDA_R_32F, N, CUBLAS_COMPUTE_32F, CUBLAS_GEMM_DEFAULT_TENSOR_OP);
 }
 
-void runCublasBF16(cublasHandle_t handle, int M, int N, int K, float alpha, float *A, float *B,
-                   float beta, float *C)
+void runCublasBF16(cublasHandle_t handle, int M, int N, int K, float alpha, float *A, float *B, float beta, float *C)
 {
     // This runs cuBLAS with mixed precision (performing the mul with operands
     // downcast to bf16), which is ~4x faster
-    cublasGemmEx(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K, &alpha, B, CUDA_R_32F, N, A, CUDA_R_32F,
-                 K, &beta, C, CUDA_R_32F, N, CUBLAS_COMPUTE_32F_FAST_16BF,
-                 CUBLAS_GEMM_DEFAULT_TENSOR_OP);
+    cublasGemmEx(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K, &alpha, B, CUDA_R_32F, N, A, CUDA_R_32F, K, &beta, C,
+                 CUDA_R_32F, N, CUBLAS_COMPUTE_32F_FAST_16BF, CUBLAS_GEMM_DEFAULT_TENSOR_OP);
 }
 
-void runCublasTF32(cublasHandle_t handle, int M, int N, int K, float alpha, float *A, float *B,
-                   float beta, float *C)
+void runCublasTF32(cublasHandle_t handle, int M, int N, int K, float alpha, float *A, float *B, float beta, float *C)
 {
     // This runs cuBLAS with mixed precision (performing the mul with operands
     // downcast to bf16), which is ~4x faster
-    cublasGemmEx(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K, &alpha, B, CUDA_R_32F, N, A, CUDA_R_32F,
-                 K, &beta, C, CUDA_R_32F, N, CUBLAS_COMPUTE_32F_FAST_TF32,
-                 CUBLAS_GEMM_DEFAULT_TENSOR_OP);
+    cublasGemmEx(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K, &alpha, B, CUDA_R_32F, N, A, CUDA_R_32F, K, &beta, C,
+                 CUDA_R_32F, N, CUBLAS_COMPUTE_32F_FAST_TF32, CUBLAS_GEMM_DEFAULT_TENSOR_OP);
 }
 
 void run_sgemm_naive(int M, int N, int K, float alpha, float *A, float *B, float beta, float *C)
@@ -175,8 +168,7 @@ void run_sgemm_coalesce(int M, int N, int K, float alpha, float *A, float *B, fl
     sgemm_global_mem_coalesce<32><<<gridDim, blockDim>>>(M, N, K, alpha, A, B, beta, C);
 }
 
-void run_sgemm_shared_mem_block(int M, int N, int K, float alpha, float *A, float *B, float beta,
-                                float *C)
+void run_sgemm_shared_mem_block(int M, int N, int K, float alpha, float *A, float *B, float beta, float *C)
 {
     dim3 gridDim(CEIL_DIV(M, 32), CEIL_DIV(N, 32));
     dim3 blockDim(32 * 32);
@@ -188,8 +180,7 @@ void run_sgemm_shared_mem_block(int M, int N, int K, float alpha, float *A, floa
     sgemm_shared_mem_block<32><<<gridDim, blockDim>>>(M, N, K, alpha, A, B, beta, C);
 }
 
-void runSgemm1DBlocktiling(int M, int N, int K, float alpha, float *A, float *B, float beta,
-                           float *C)
+void runSgemm1DBlocktiling(int M, int N, int K, float alpha, float *A, float *B, float beta, float *C)
 {
     const uint BM = 64;
     const uint BN = 64;
@@ -200,8 +191,7 @@ void runSgemm1DBlocktiling(int M, int N, int K, float alpha, float *A, float *B,
     sgemm1DBlocktiling<BM, BN, BK, TM><<<gridDim, blockDim>>>(M, N, K, alpha, A, B, beta, C);
 }
 
-void runSgemm2DBlocktiling(int M, int N, int K, float alpha, float *A, float *B, float beta,
-                           float *C)
+void runSgemm2DBlocktiling(int M, int N, int K, float alpha, float *A, float *B, float beta, float *C)
 {
     const uint BK = 8;
     const uint TM = 8;
@@ -211,8 +201,7 @@ void runSgemm2DBlocktiling(int M, int N, int K, float alpha, float *A, float *B,
         const uint BN = 128;
         dim3 gridDim(CEIL_DIV(N, BN), CEIL_DIV(M, BM));
         dim3 blockDim((BM * BN) / (TM * TN));
-        sgemm2DBlocktiling<BM, BN, BK, TM, TN>
-            <<<gridDim, blockDim>>>(M, N, K, alpha, A, B, beta, C);
+        sgemm2DBlocktiling<BM, BN, BK, TM, TN><<<gridDim, blockDim>>>(M, N, K, alpha, A, B, beta, C);
     } else {
         // this is a hacky solution to the underlying problem
         // of not having proper bounds checking in the kernel
@@ -220,8 +209,7 @@ void runSgemm2DBlocktiling(int M, int N, int K, float alpha, float *A, float *B,
         const uint BN = 64;
         dim3 gridDim(CEIL_DIV(N, BN), CEIL_DIV(M, BM));
         dim3 blockDim((BM * BN) / (TM * TN));
-        sgemm2DBlocktiling<BM, BN, BK, TM, TN>
-            <<<gridDim, blockDim>>>(M, N, K, alpha, A, B, beta, C);
+        sgemm2DBlocktiling<BM, BN, BK, TM, TN><<<gridDim, blockDim>>>(M, N, K, alpha, A, B, beta, C);
     }
 }
 
@@ -247,8 +235,7 @@ void runSgemmVectorize(int M, int N, int K, float alpha, float *A, float *B, flo
     }
 }
 
-void runSgemmResolveBankConflicts(int M, int N, int K, float alpha, float *A, float *B, float beta,
-                                  float *C)
+void runSgemmResolveBankConflicts(int M, int N, int K, float alpha, float *A, float *B, float beta, float *C)
 {
     const uint BK = 8;
     const uint TM = 8;
@@ -258,8 +245,7 @@ void runSgemmResolveBankConflicts(int M, int N, int K, float alpha, float *A, fl
         const uint BN = 128;
         dim3 gridDim(CEIL_DIV(N, BN), CEIL_DIV(M, BM));
         dim3 blockDim((BM * BN) / (TM * TN));
-        sgemmResolveBankConflicts<BM, BN, BK, TM, TN>
-            <<<gridDim, blockDim>>>(M, N, K, alpha, A, B, beta, C);
+        sgemmResolveBankConflicts<BM, BN, BK, TM, TN><<<gridDim, blockDim>>>(M, N, K, alpha, A, B, beta, C);
     } else {
         // this is a hacky solution to the underlying problem
         // of not having proper bounds checking in the kernel
@@ -267,13 +253,11 @@ void runSgemmResolveBankConflicts(int M, int N, int K, float alpha, float *A, fl
         const uint BN = 64;
         dim3 gridDim(CEIL_DIV(N, BN), CEIL_DIV(M, BM));
         dim3 blockDim((BM * BN) / (TM * TN));
-        sgemmResolveBankConflicts<BM, BN, BK, TM, TN>
-            <<<gridDim, blockDim>>>(M, N, K, alpha, A, B, beta, C);
+        sgemmResolveBankConflicts<BM, BN, BK, TM, TN><<<gridDim, blockDim>>>(M, N, K, alpha, A, B, beta, C);
     }
 }
 
-void runSgemmResolveBankExtraCol(int M, int N, int K, float alpha, float *A, float *B, float beta,
-                                 float *C)
+void runSgemmResolveBankExtraCol(int M, int N, int K, float alpha, float *A, float *B, float beta, float *C)
 {
     const uint BK = 8;
     const uint TM = 8;
@@ -283,8 +267,7 @@ void runSgemmResolveBankExtraCol(int M, int N, int K, float alpha, float *A, flo
         const uint BN = 128;
         dim3 gridDim(CEIL_DIV(N, BN), CEIL_DIV(M, BM));
         dim3 blockDim((BM * BN) / (TM * TN));
-        sgemmResolveBankExtraCol<BM, BN, BK, TM, TN>
-            <<<gridDim, blockDim>>>(M, N, K, alpha, A, B, beta, C);
+        sgemmResolveBankExtraCol<BM, BN, BK, TM, TN><<<gridDim, blockDim>>>(M, N, K, alpha, A, B, beta, C);
     } else {
         // this is a hacky solution to the underlying problem
         // of not having proper bounds checking in the kernel
@@ -292,8 +275,7 @@ void runSgemmResolveBankExtraCol(int M, int N, int K, float alpha, float *A, flo
         const uint BN = 64;
         dim3 gridDim(CEIL_DIV(N, BN), CEIL_DIV(M, BM));
         dim3 blockDim((BM * BN) / (TM * TN));
-        sgemmResolveBankExtraCol<BM, BN, BK, TM, TN>
-            <<<gridDim, blockDim>>>(M, N, K, alpha, A, B, beta, C);
+        sgemmResolveBankExtraCol<BM, BN, BK, TM, TN><<<gridDim, blockDim>>>(M, N, K, alpha, A, B, beta, C);
     }
 }
 
@@ -321,18 +303,15 @@ void runSgemmAutotuned(int M, int N, int K, float alpha, float *A, float *B, flo
                   "NUM_THREADS*4 must be multiple of K9_BN to avoid quantization issues "
                   "during GMEM->SMEM tiling (loading only parts of the final row of As "
                   "during each iteration)");
-    static_assert(K9_BN % (16 * K9_TN) == 0,
-                  "K9_BN must be a multiple of 16*K9_TN to avoid quantization effects");
-    static_assert(K9_BM % (16 * K9_TM) == 0,
-                  "K9_BM must be a multiple of 16*K9_TM to avoid quantization effects");
+    static_assert(K9_BN % (16 * K9_TN) == 0, "K9_BN must be a multiple of 16*K9_TN to avoid quantization effects");
+    static_assert(K9_BM % (16 * K9_TM) == 0, "K9_BM must be a multiple of 16*K9_TM to avoid quantization effects");
     static_assert((K9_BM * K9_BK) % (4 * K9_NUM_THREADS) == 0,
                   "K9_BM*K9_BK must be a multiple of 4*256 to vectorize loads");
     static_assert((K9_BN * K9_BK) % (4 * K9_NUM_THREADS) == 0,
                   "K9_BN*K9_BK must be a multiple of 4*256 to vectorize loads");
 
     dim3 gridDim(CEIL_DIV(N, K9_BN), CEIL_DIV(M, K9_BM));
-    sgemmAutotuned<K9_BM, K9_BN, K9_BK, K9_TM, K9_TN>
-        <<<gridDim, blockDim>>>(M, N, K, alpha, A, B, beta, C);
+    sgemmAutotuned<K9_BM, K9_BN, K9_BK, K9_TM, K9_TN><<<gridDim, blockDim>>>(M, N, K, alpha, A, B, beta, C);
 }
 
 void runSgemmWarptiling(int M, int N, int K, float alpha, float *A, float *B, float beta, float *C)
@@ -379,22 +358,19 @@ void runSgemmWarptiling(int M, int N, int K, float alpha, float *A, float *B, fl
                   "NUM_THREADS*4 must be multiple of K9_BN to avoid quantization "
                   "issues during GMEM->SMEM tiling (loading only parts of the "
                   "final row of As during each iteration)");
-    static_assert(K10_BN % (16 * K10_TN) == 0,
-                  "BN must be a multiple of 16*TN to avoid quantization effects");
-    static_assert(K10_BM % (16 * K10_TM) == 0,
-                  "BM must be a multiple of 16*TM to avoid quantization effects");
+    static_assert(K10_BN % (16 * K10_TN) == 0, "BN must be a multiple of 16*TN to avoid quantization effects");
+    static_assert(K10_BM % (16 * K10_TM) == 0, "BM must be a multiple of 16*TM to avoid quantization effects");
     static_assert((K10_BM * K10_BK) % (4 * K10_NUM_THREADS) == 0,
                   "BM*BK must be a multiple of 4*256 to vectorize loads");
     static_assert((K10_BN * K10_BK) % (4 * K10_NUM_THREADS) == 0,
                   "BN*BK must be a multiple of 4*256 to vectorize loads");
 
     dim3 gridDim(CEIL_DIV(N, K10_BN), CEIL_DIV(M, K10_BM));
-    sgemmWarptiling<K10_BM, K10_BN, K10_BK, K10_WM, K10_WN, K10_WNITER, K10_TM, K10_TN,
-                    K10_NUM_THREADS><<<gridDim, blockDim>>>(M, N, K, alpha, A, B, beta, C);
+    sgemmWarptiling<K10_BM, K10_BN, K10_BK, K10_WM, K10_WN, K10_WNITER, K10_TM, K10_TN, K10_NUM_THREADS>
+        <<<gridDim, blockDim>>>(M, N, K, alpha, A, B, beta, C);
 }
 
-void runSgemmDoubleBuffering(int M, int N, int K, float alpha, float *A, float *B, float beta,
-                             float *C)
+void runSgemmDoubleBuffering(int M, int N, int K, float alpha, float *A, float *B, float beta, float *C)
 {
     // Settings for A100
     // const uint K11_NUM_THREADS = 256;
@@ -438,22 +414,19 @@ void runSgemmDoubleBuffering(int M, int N, int K, float alpha, float *A, float *
                   "NUM_THREADS*4 must be multiple of BN to avoid quantization "
                   "issues during GMEM->SMEM tiling (loading only parts of the "
                   "final row of As during each iteration)");
-    static_assert(K11_BN % (16 * K11_TN) == 0,
-                  "BN must be a multiple of 16*TN to avoid quantization effects");
-    static_assert(K11_BM % (16 * K11_TM) == 0,
-                  "BM must be a multiple of 16*TM to avoid quantization effects");
+    static_assert(K11_BN % (16 * K11_TN) == 0, "BN must be a multiple of 16*TN to avoid quantization effects");
+    static_assert(K11_BM % (16 * K11_TM) == 0, "BM must be a multiple of 16*TM to avoid quantization effects");
     static_assert((K11_BM * K11_BK) % (4 * K11_NUM_THREADS / 2) == 0,
                   "BM*BK must be a multiple of 4*256 to vectorize loads");
     static_assert((K11_BN * K11_BK) % (4 * K11_NUM_THREADS / 2) == 0,
                   "BN*BK must be a multiple of 4*256 to vectorize loads");
 
     dim3 gridDim(CEIL_DIV(N, K11_BN), CEIL_DIV(M, K11_BM));
-    sgemmDoubleBuffering<K11_BM, K11_BN, K11_BK, K11_WM, K11_WN, K11_WNITER, K11_TM, K11_TN,
-                         K11_NUM_THREADS><<<gridDim, blockDim>>>(M, N, K, alpha, A, B, beta, C);
+    sgemmDoubleBuffering<K11_BM, K11_BN, K11_BK, K11_WM, K11_WN, K11_WNITER, K11_TM, K11_TN, K11_NUM_THREADS>
+        <<<gridDim, blockDim>>>(M, N, K, alpha, A, B, beta, C);
 }
 
-void runSgemmDoubleBuffering2(int M, int N, int K, float alpha, float *A, float *B, float beta,
-                              float *C)
+void runSgemmDoubleBuffering2(int M, int N, int K, float alpha, float *A, float *B, float beta, float *C)
 {
     // Settings for A6000
     const uint K12_NUM_THREADS = 128;
@@ -487,22 +460,20 @@ void runSgemmDoubleBuffering2(int M, int N, int K, float alpha, float *A, float 
                   "NUM_THREADS*4 must be multiple of K9_BN to avoid quantization "
                   "issues during GMEM->SMEM tiling (loading only parts of the "
                   "final row of As during each iteration)");
-    static_assert(K12_BN % (16 * K12_TN) == 0,
-                  "BN must be a multiple of 16*TN to avoid quantization effects");
-    static_assert(K12_BM % (16 * K12_TM) == 0,
-                  "BM must be a multiple of 16*TM to avoid quantization effects");
+    static_assert(K12_BN % (16 * K12_TN) == 0, "BN must be a multiple of 16*TN to avoid quantization effects");
+    static_assert(K12_BM % (16 * K12_TM) == 0, "BM must be a multiple of 16*TM to avoid quantization effects");
     static_assert((K12_BM * K12_BK) % (4 * K12_NUM_THREADS) == 0,
                   "BM*BK must be a multiple of 4*256 to vectorize loads");
     static_assert((K12_BN * K12_BK) % (4 * K12_NUM_THREADS) == 0,
                   "BN*BK must be a multiple of 4*256 to vectorize loads");
 
     dim3 gridDim(CEIL_DIV(N, K12_BN), CEIL_DIV(M, K12_BM));
-    runSgemmDoubleBuffering2<K12_BM, K12_BN, K12_BK, K12_WM, K12_WN, K12_WNITER, K12_TM, K12_TN,
-                             K12_NUM_THREADS><<<gridDim, blockDim>>>(M, N, K, alpha, A, B, beta, C);
+    runSgemmDoubleBuffering2<K12_BM, K12_BN, K12_BK, K12_WM, K12_WN, K12_WNITER, K12_TM, K12_TN, K12_NUM_THREADS>
+        <<<gridDim, blockDim>>>(M, N, K, alpha, A, B, beta, C);
 }
 
-void run_kernel(int kernel_num, int M, int N, int K, float alpha, float *A, float *B, float beta,
-                float *C, cublasHandle_t handle)
+void run_kernel(int kernel_num, int M, int N, int K, float alpha, float *A, float *B, float beta, float *C,
+                cublasHandle_t handle)
 {
     switch (kernel_num) {
         case 0:
