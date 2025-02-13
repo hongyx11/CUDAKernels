@@ -34,7 +34,9 @@ void CudaDeviceInfo()
 
     cudaDeviceProp props{};
     cudaGetDeviceProperties(&props, deviceId);
-
+    size_t free, total;
+    cudaMemGetInfo(&free, &total);
+    printf("Free memory: %zu, Total memory: %zu\n", free, total);
     printf(
         "Device ID: %d\n\
     Name: %s\n\
@@ -45,6 +47,7 @@ void CudaDeviceInfo()
     maxRegsPerBlock: %d\n\
     maxRegsPerMultiProcessor: %d\n\
     totalGlobalMem: %zuMB\n\
+    totalFreeMem: %.3fMB\n\
     sharedMemPerBlock: %zuKB\n\
     sharedMemPerMultiprocessor: %zuKB\n\
     totalConstMem: %zuKB\n\
@@ -52,7 +55,7 @@ void CudaDeviceInfo()
     Warp Size: %d\n",
         deviceId, props.name, props.major, props.minor, props.memoryBusWidth, props.maxThreadsPerBlock,
         props.maxThreadsPerMultiProcessor, props.regsPerBlock, props.regsPerMultiprocessor,
-        props.totalGlobalMem / 1024 / 1024, props.sharedMemPerBlock / 1024, props.sharedMemPerMultiprocessor / 1024,
+        props.totalGlobalMem / 1024 / 1024, free / 1024. / 1024., props.sharedMemPerBlock / 1024, props.sharedMemPerMultiprocessor / 1024,
         props.totalConstMem / 1024, props.multiProcessorCount, props.warpSize);
 };
 

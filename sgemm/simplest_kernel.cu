@@ -1,6 +1,9 @@
+#include <stdlib.h>
 #include <cuda_runtime.h>
+
 #include <iostream>
 #include <vector>
+
 
 __global__ void kernel(uint *A, uint *B, int row) {
   auto x = threadIdx.x / 4;

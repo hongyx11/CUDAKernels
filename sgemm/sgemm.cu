@@ -1,3 +1,5 @@
+#include <spdlog/spdlog.h>
+
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
@@ -34,8 +36,13 @@ int main(int argc, char **argv)
     printf("Running kernel %d on device %d.\n", kernel_num, deviceIdx);
 
     // print some device info
-    // CudaDeviceInfo();
-
+    CudaDeviceInfo();
+    size_t freemem, totalmem;
+    cudaMemGetInfo(&freemem, &totalmem);
+    printf("Free memory: %zu, Total memory: %zu\n", freemem, totalmem);
+    if (freemem < 1024 * 1024 * 1024) {
+        spdlog::info("free meory is too small %.3f MB", freemem / (1024.0 * 1024.0));
+    }
     // Declare the handle, create the handle, cublasCreate will return a value of
     // type cublasStatus_t to determine whether the handle was created
     // successfully (the value is 0)
@@ -89,8 +96,7 @@ int main(int argc, char **argv)
     for (int size : SIZE) {
         m = n = k = size;
 
-        std::cout << "dimensions(m=n=k) " << m << ", alpha: " << alpha << ", beta: " << beta
-                  << std::endl;
+        std::cout << "dimensions(m=n=k) " << m << ", alpha: " << alpha << ", beta: " << beta << std::endl;
         // Verify the correctness of the calculation, and execute it once before the
         // kernel function timing to avoid cold start errors
         if (kernel_num != 0) {
