@@ -8,11 +8,10 @@
 #include <cstdio>
 #include <cstdlib>
 
-#define CEIL_DIV(M, N) (((M) + (N)-1) / (N))
+#define CEIL_DIV(M, N) (((M) + (N) - 1) / (N))
 
 template <int BM, int BN, int BK, int TM, int TN>
-__global__ void sgemmVectorize(int M, int N, int K, float alpha, float *A, float *B, float beta,
-                               float *C)
+__global__ void sgemmVectorize(int M, int N, int K, float alpha, float *A, float *B, float beta, float *C)
 {
     const uint cRow = blockIdx.y;
     const uint cCol = blockIdx.x;
@@ -52,8 +51,7 @@ __global__ void sgemmVectorize(int M, int N, int K, float alpha, float *A, float
         As[(innerColA * 4 + 2) * BM + innerRowA] = tmp.z;
         As[(innerColA * 4 + 3) * BM + innerRowA] = tmp.w;
 
-        reinterpret_cast<float4 *>(&Bs[innerRowB * BN + innerColB * 4])[0] =
-            reinterpret_cast<float4 *>(&B[innerRowB * N + innerColB * 4])[0];
+        reinterpret_cast<float4 *>(&Bs[innerRowB * BN + innerColB * 4])[0] = reinterpret_cast<float4 *>(&B[innerRowB * N + innerColB * 4])[0];
         __syncthreads();
 
         // advance blocktile
@@ -82,16 +80,14 @@ __global__ void sgemmVectorize(int M, int N, int K, float alpha, float *A, float
     for (uint resIdxM = 0; resIdxM < TM; resIdxM += 1) {
         for (uint resIdxN = 0; resIdxN < TN; resIdxN += 4) {
             // load C vector into registers
-            float4 tmp = reinterpret_cast<float4 *>(
-                &C[(threadRow * TM + resIdxM) * N + threadCol * TN + resIdxN])[0];
+            float4 tmp = reinterpret_cast<float4 *>(&C[(threadRow * TM + resIdxM) * N + threadCol * TN + resIdxN])[0];
             // perform GEMM update in reg
             tmp.x = alpha * threadResults[resIdxM * TN + resIdxN] + beta * tmp.x;
             tmp.y = alpha * threadResults[resIdxM * TN + resIdxN + 1] + beta * tmp.y;
             tmp.z = alpha * threadResults[resIdxM * TN + resIdxN + 2] + beta * tmp.z;
             tmp.w = alpha * threadResults[resIdxM * TN + resIdxN + 3] + beta * tmp.w;
             // write back
-            reinterpret_cast<float4 *>(
-                &C[(threadRow * TM + resIdxM) * N + threadCol * TN + resIdxN])[0] = tmp;
+            reinterpret_cast<float4 *>(&C[(threadRow * TM + resIdxM) * N + threadCol * TN + resIdxN])[0] = tmp;
         }
     }
 }

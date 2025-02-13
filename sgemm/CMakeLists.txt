@@ -26,7 +26,7 @@ aux_source_directory(${PROJECT_SOURCE_DIR}/src SRC)
 # generate executable
 add_executable(sgemm sgemm.cu ${SRC})
 target_link_libraries(sgemm CUDA::cudart CUDA::cublas)
-
+target_include_directories(sgemm PRIVATE ${CMAKE_SOURCE_DIR}/src)
 add_executable(cuBLAS_sgemm cuBLAS_sgemm.cu )
 target_link_libraries(cuBLAS_sgemm CUDA::cudart CUDA::cublas)
 

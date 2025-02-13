@@ -8,11 +8,10 @@
 #include <cstdio>
 #include <cstdlib>
 
-#define CEIL_DIV(M, N) (((M) + (N)-1) / (N))
+#define CEIL_DIV(M, N) (((M) + (N) - 1) / (N))
 
 template <int BM, int BN, int BK, int TM>
-__global__ void sgemm1DBlocktiling(int M, int N, int K, float alpha, const float *A, const float *B,
-                                   float beta, float *C)
+__global__ void sgemm1DBlocktiling(int M, int N, int K, float alpha, const float *A, const float *B, float beta, float *C)
 {
     // If we flip x and y here we get ~30% less performance for large matrices.
     // The current, 30% faster configuration ensures that blocks with sequential
@@ -73,7 +72,6 @@ __global__ void sgemm1DBlocktiling(int M, int N, int K, float alpha, const float
 
     // write out the results
     for (uint resIdx = 0; resIdx < TM; ++resIdx) {
-        C[(threadRow * TM + resIdx) * N + threadCol] =
-            alpha * threadResults[resIdx] + beta * C[(threadRow * TM + resIdx) * N + threadCol];
+        C[(threadRow * TM + resIdx) * N + threadCol] = alpha * threadResults[resIdx] + beta * C[(threadRow * TM + resIdx) * N + threadCol];
     }
 }

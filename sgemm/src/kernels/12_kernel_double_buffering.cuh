@@ -107,7 +107,7 @@ __global__ void __launch_bounds__(NUM_THREADS)
         init(&backBarrier, block.size());
     }
     __syncthreads();
-
+    const uint WARPSIZE = 32;
     const uint cRow = blockIdx.y;
     const uint cCol = blockIdx.x;
 
